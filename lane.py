@@ -1,9 +1,9 @@
-import sys
-sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+#import sys
+#sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 def Canny(image):
 	gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
@@ -59,12 +59,19 @@ def average_slope_intercept(image, lines):
 	return np.array([left_line, right_line])
 
 def main():
-	# image = cv2.imread("test_image.jpg")
-	# lane_image = np.copy(image)
-	# canny_image = Canny(lane_image)
-	# crop_image = region_of_interest(canny_image)
-	
-	# # Image, P_resolution, Theta_resolution, Minimum point threshold, Place holder array, Minimum Line Lenght, Maximum Line Gap
+	sample_image = cv2.imread("test_image.jpg")
+	height = sample_image.shape[0]
+	width = sample_image.shape[1]
+
+	image = cv2.imread("my_test.JPG")
+	image = cv2.resize(image, (width, height))
+
+	lane_image = np.copy(image)
+	canny_image = Canny(lane_image)
+	crop_image = region_of_interest(canny_image)
+	cv2.imshow('hi',canny_image)
+
+	# Image, P_resolution, Theta_resolution, Minimum point threshold, Place holder array, Minimum Line Lenght, Maximum Line Gap
 	# lines = cv2.HoughLinesP(crop_image, 2, np.pi/180, 100, np.array([]), minLineLength = 40, maxLineGap = 5)
 	# average_lines = average_slope_intercept(lane_image, lines)
 	
@@ -74,30 +81,31 @@ def main():
 	# #First Image, multiply with weight1, Second Image, Multply with weight2, Add the combine Image with the weight3
 	# combo_image = cv2.addWeighted(lane_image, 0.8, lines_image, 1, 1)
 	# cv2.imshow('result', combo_image)
-	# cv2.waitKey(0)
-	# # plt.imshow(region_of_interest(canny))
-	# # plt.show()
+	cv2.waitKey(0)
+	# plt.imshow(region_of_interest(canny))
+	# plt.show()
 
-	cap = cv2.VideoCapture("test2.mp4")
-	while(cap.isOpened()):
-		bool_var, frame = cap.read()
-		canny_image = Canny(frame)
-		crop_image = region_of_interest(canny_image)
+
+	# cap = cv2.VideoCapture("test2.mp4")
+	# while(cap.isOpened()):
+	# 	bool_var, frame = cap.read()
+	# 	canny_image = Canny(frame)
+	# 	crop_image = region_of_interest(canny_image)
 		
-		# Image, P_resolution, Theta_resolution, Minimum point threshold, Place holder array, Minimum Line Lenght, Maximum Line Gap
-		lines = cv2.HoughLinesP(crop_image, 2, np.pi/180, 100, np.array([]), minLineLength = 40, maxLineGap = 5)
-		average_lines = average_slope_intercept(frame, lines)
+	# 	# Image, P_resolution, Theta_resolution, Minimum point threshold, Place holder array, Minimum Line Lenght, Maximum Line Gap
+	# 	lines = cv2.HoughLinesP(crop_image, 2, np.pi/180, 100, np.array([]), minLineLength = 40, maxLineGap = 5)
+	# 	average_lines = average_slope_intercept(frame, lines)
 		
 
-		lines_image = display_line(frame, average_lines)
+	# 	lines_image = display_line(frame, average_lines)
 
-		#First Image, multiply with weight1, Second Image, Multply with weight2, Add the combine Image with the weight3
-		combo_image = cv2.addWeighted(frame, 0.8, lines_image, 1, 1)
-		cv2.imshow('result', combo_image)
-		if cv2.waitKey(1) & 0xFF == ord('q'):
-			break
-	cap.release()
-	cv2.destroyAllWindows()
+	# 	#First Image, multiply with weight1, Second Image, Multply with weight2, Add the combine Image with the weight3
+	# 	combo_image = cv2.addWeighted(frame, 0.8, lines_image, 1, 1)
+	# 	cv2.imshow('result', combo_image)
+	# 	if cv2.waitKey(1) & 0xFF == ord('q'):
+	# 		break
+	# cap.release()
+	# cv2.destroyAllWindows()
 
 		# plt.imshow(region_of_interest(canny))
 		# plt.show()
