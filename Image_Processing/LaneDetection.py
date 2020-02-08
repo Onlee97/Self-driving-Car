@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import sys
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
+#from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
 
 
@@ -207,9 +207,16 @@ def display_lines(frame, lines, points, center_line, distance_line, distance_col
     return line_image
 
 if __name__ == "__main__":
-	cap = cv2.VideoCapture(0)
-	_, frame = cap.read()
-	detect = detect_lane(frame)
-	cv2.imshow('result', detected)
-	cv2.waitkey(1)
+    #cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture("output4.mp4")
+    while(True):
+        _, frame = cap.read()
+        detected = detect_lane(frame)
+        cv2.imshow('result', detected)
+        #cv2.imshow('result', frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break;
+
+    cap.release()
+    cv2.destroyAllWindows()
 
