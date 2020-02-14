@@ -32,8 +32,10 @@ def detect_line_segments(cropped_edges):
     return line_segments
 
 
-x = 640
-y = 360
+#x = 640
+#y = 360
+x = 0
+y = 0
 center_point = []
 center_point.append([[x,y]])
 
@@ -174,7 +176,7 @@ def midpointAverage(center_point, previous_point):
 	yky = a*y0+(1-a)*xky
 	return [[ykx, yky]]
 
-filtered_x = 640
+filtered_x = 0
 
 def exponential_filter(filtered_x, x, alpha):
 	filtered_x = alpha*x + (1-alpha)*filtered_x
@@ -220,12 +222,18 @@ def show_video():
     cap.release()
     cv2.destroyAllWindows()
 
+w=640
+h=360
 def gstreamer_pipeline(
-    capture_width=1280,
-    capture_height=720,
-    display_width=1280,
-    display_height=720,
-    framerate=60,
+    #capture_width=1280,
+    #capture_height=720,
+    #display_width=1280,
+    #display_height=720,
+    framerate=30,
+    capture_width=w,
+    capture_height=h,
+    display_width=w,
+    display_height=h,
     flip_method=0,
 ):
     return (
