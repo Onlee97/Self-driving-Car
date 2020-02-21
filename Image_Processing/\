@@ -249,17 +249,16 @@ def gstreamer_pipeline(
 robot = Robot()
 def control_motor(distance):
     threshold = 30
-    speed = 0.1
-    speedDif = speed*((2*abs(distance))/w)
+    speed = 0.1*((2*distance)/w)
     print(distance)
     if (distance < -threshold):  #turn right
-        robot.left_motor.value = speed+speedDif
+        robot.left_motor.value = speed*2
         robot.right_motor.value = speed
     elif (distance > threshold): #turn Left
-        robot.right_motor.value = speed+speedDif
+        robot.right_motor.value = speed*2
         robot.left_motor.value = speed
     else:
-        robot.set_motors(speed*1.5, speed*1.5)
+        robot.set_motors(0.1,0.1)
 
 def show_camera():
     print(gstreamer_pipeline(flip_method=0))
