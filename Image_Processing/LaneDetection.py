@@ -3,7 +3,6 @@ import numpy as np
 import sys
 from jetbot import Robot
 import time
-#from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
 
 
@@ -174,12 +173,13 @@ def exponential_filter(filtered_x, x, alpha):
 	return filtered_x
 
 def detect_lane(frame):
-    edges = detect_edges(frame)
-    cropped_edges = region_of_interest(edges)
-    line_segments = detect_line_segments(cropped_edges)
-    lane_lines, center_point, center_line, distance_line = average_slope_intercept(frame, line_segments)
-    lane_lines_image = display_lines(frame, lane_lines, center_point, center_line, distance_line)
-    return lane_lines_image
+	global distance
+	edges = detect_edges(frame)
+	cropped_edges = region_of_interest(edges)
+	line_segments = detect_line_segments(cropped_edges)
+	lane_lines, center_point, center_line, distance_line = average_slope_intercept(frame, line_segments)
+	lane_lines_image = display_lines(frame, lane_lines, center_point, center_line, distance_line)
+	return lane_lines_image, distance
 
 def display_lines(frame, lines, points, center_line, distance_line, distance_color = (255, 0, 0), center_color = (0, 255, 0), line_color=(0, 255, 0), point_color = (0, 0, 255), line_width=2):
     line_image = np.zeros_like(frame)
@@ -262,30 +262,30 @@ def control_motor(distance):
         robot.set_motors(speed*1.5, speed*1.5)
 
 def show_camera():
-    print(gstreamer_pipeline(flip_method=0))
-    cap = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
-    if cap.isOpened():
-        window_handle = cv2.namedWindow("CSI Camera", cv2.WINDOW_AUTOSIZE)
-        # Window
-        while cv2.getWindowProperty("CSI Camera", 0) >= 0:
-            ret_val, img = cap.read()
-            
-            try:
-                img = detect_lane(img)
-                
-                control_motor(distance)
-            except:
-                print("Error: ", distance)
-            cv2.imshow("CSI Camera", img)
-            # This also acts as
-            keyCode = cv2.waitKey(30) & 0xFF
-            # Stop the program on the ESC key
-            if keyCode == 27:
-                break
-        cap.release()
-        cv2.destroyAllWindows()
-    else:
-        print("Unable to open camera")
+	print(gstreamer_pipeline(flip_method=0))
+	cap = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
+	if cap.isOpened():
+		window_handle = cv2.namedWindow("CSI Camera", cv2.WINDOW_AUTOSIZE)
+		# Window
+		while cv2.getWindowProperty("CSI Camera", 0) >= 0:
+			ret_val, img = cap.read()
+
+			try:
+				img = detect_lane(img)
+				control_motor(distance)
+			except:
+				print("Error")
+
+			cv2.imshow("CSI", img)
+			# This also acts as
+			keyCode = cv2.waitKey(30) & 0xFF
+			# Stop the program on the ESC key
+			if keyCode == 27:
+				break
+		cap.release()
+		cv2.destroyAllWindows()
+	else:
+		print("Unable to open camera")
 
 
 if __name__ == "__main__":
