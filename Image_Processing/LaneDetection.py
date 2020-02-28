@@ -271,12 +271,12 @@ def show_camera():
 			ret_val, img = cap.read()
 
 			try:
-				img = detect_lane(img)
+				img, distance = detect_lane(img)
 				control_motor(distance)
 			except:
 				print("Error")
 
-			cv2.imshow("CSI", img)
+			cv2.imshow("CSI Camera", img)
 			# This also acts as
 			keyCode = cv2.waitKey(30) & 0xFF
 			# Stop the program on the ESC key
