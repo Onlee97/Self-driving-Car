@@ -1,6 +1,7 @@
 from ctypes import *
 import math
 import random
+import numpy as np
 
 def sample(probs):
     s = sum(probs)
@@ -44,8 +45,8 @@ class METADATA(Structure):
 
     
 
-#lib = CDLL("/home/pjreddie/documents/darknet/libdarknet.so", RTLD_GLOBAL)
-lib = CDLL("libdarknet.so", RTLD_GLOBAL)
+lib = CDLL("/home/jetbot/darknet/libdarknet.so", RTLD_GLOBAL)
+#lib = CDLL("libdarknet.so", RTLD_GLOBAL)
 lib.network_width.argtypes = [c_void_p]
 lib.network_width.restype = c_int
 lib.network_height.argtypes = [c_void_p]
@@ -128,28 +129,31 @@ def array_to_image(arr):
     c = arr.shape[0]
     h = arr.shape[1]
     w = arr.shape[2]
-    arr = (arr / 255.0).flatten()
-    data = c_array(c_float, arr)
-    im = IMAGE(w, h, c, data)
-    return im
+    #arr = (arr / 255.0).flatten()
+    arr = np.ascontiguousarray(arr.flat,dtype=np.float32) / 255.0
+	#data = c_array(c_float, arr)
+    data = arr.ctypes.data_as(POINTER(c_float))
+	im = IMAGE(w, h, c, data)
+    return im, arr
 #-------------------------------
 
 
 def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
     #-------------------ADDED STATEMENT-------------------
-    if isinstance(image, bytes):  
-        # image is a filename 
-        # i.e. image = b'/darknet/data/dog.jpg'
-        im = load_image(image, 0, 0)
-    else:  
-        # image is a numpy array 
-        # i.e. image = cv2.imread('/darknet/data/dog.jpg')
-        im = array_to_image(image)
-        rgbgr_image(im)
+    #if isinstance(image, bytes):  
+    #    # image is a filename 
+    #    # i.e. image = b'/darknet/data/dog.jpg'
+    #    im = load_image(image, 0, 0)
+    #else:  
+    #    # image is a numpy array 
+    #    # i.e. image = cv2.imread('/darknet/data/dog.jpg')
+    #    im = array_to_image(image)
+    #    rgbgr_image(im)
     #-----------------------------------------------------
 
-    im = load_image(image, 0, 0)
-    num = c_int(0)
+    #im = load_image(image, 0, 0)
+    im, image = array_to_image(image)
+	num = c_int(0)
     pnum = pointer(num)
     predict_image(net, im)
     dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, None, 0, pnum)
@@ -158,12 +162,14 @@ def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
 
     res = []
     for j in range(num):
-        for i in range(meta.classes):
-            if dets[j].prob[i] > 0:
+		a = dets[j].prob[0:meta.classes]
+        if any(a):
+			ai = np.array(a).nonzero()[0]
+			for i in ai:
                 b = dets[j].bbox
                 res.append((meta.names[i], dets[j].prob[i], (b.x, b.y, b.w, b.h)))
     res = sorted(res, key=lambda x: -x[1])
-    free_image(im)
+    iffree_image(im)
     free_detections(dets, num)
     return res
     

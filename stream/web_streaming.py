@@ -2,6 +2,10 @@ import cv2
 import time
 import threading
 from flask import Response, Flask
+import sys
+sys.path.insert(0, '../Image_Processing/')
+import LaneDetection as ld
+from jetbot import Robot
 
 # Image frame sent to the Flask object
 global video_frame
@@ -11,6 +15,9 @@ video_frame = None
 global thread_lock 
 thread_lock = threading.Lock()
 
+# Create global robot object
+global robot
+robot = Robot()
 
 # Create the Flask object for the application
 app = Flask(__name__)
@@ -49,29 +56,51 @@ def gstreamer_pipeline(
         )
     )
 
+def control_motor(distance):
+	global robot
+	threshold = 30
+	speed = 0.1
+	speedDif = speed*((2*abs(distance))/w)
+	print(distance)
+	if (distance < -threshold):  #turn right
+		robot.left_motor.value = speed+speedDif
+		robot.right_motor.value = speed
+	elif (distance > threshold): #turn Left
+		robot.right_motor.value = speed+speedDif
+		robot.left_motor.value = speed
+	else:
+		robot.set_motors(speed*1.5, speed*1.5)
+
 
 def captureFrames():
-    global video_frame, thread_lock
+	global video_frame, thread_lock
 
-    print(gstreamer_pipeline(flip_method=0))
-    
+	print(gstreamer_pipeline(flip_method=0))
+
 	# Video capturing from OpenCV
-    video_capture = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
-    while True and video_capture.isOpened():
-        return_key, frame = video_capture.read()
-        if not return_key:
-            break
+	video_capture = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
+	while True and video_capture.isOpened():
+		return_key, frame = video_capture.read()
+		if not return_key:
+			break
 
-        # Create a copy of the frame and store it in the global variable,
-        # with thread safe access
-        with thread_lock:
-            video_frame = frame.copy()
-        
-        key = cv2.waitKey(30) & 0xff
-        if key == 27:
-            break
+		#Process image
+		try:
+			frame, distance = ld.detect_lane(frame)
+			print(distance)
+			control_motor(distance)
+		except:
+			print("None Detected")
+		# Create a copy of the frame and store it in the global variable,
+		# with thread safe access
+		with thread_lock:
+			video_frame = frame.copy()
 
-    video_capture.release()
+		key = cv2.waitKey(30) & 0xff
+		if key == 27:
+			break
+
+	video_capture.release()
         
 def encodeFrame():
     global thread_lock
