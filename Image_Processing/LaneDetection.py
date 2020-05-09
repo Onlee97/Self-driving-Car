@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
 import sys
-#from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from jetbot import Robot
+import time
 
 
 
@@ -27,13 +28,15 @@ def region_of_interest(canny):
 def detect_line_segments(cropped_edges):
     rho = 2
     angle = np.pi / 180
-    min_threshold = 100
-    line_segments = cv2.HoughLinesP(cropped_edges, rho, angle, min_threshold, np.array([]),minLineLength=100, maxLineGap=50)
+    min_threshold = 50
+    line_segments = cv2.HoughLinesP(cropped_edges, rho, angle, min_threshold, np.array([]),minLineLength=50, maxLineGap=25)
     return line_segments
 
 
-x = 640
-y = 360
+#x = 640
+#y = 360
+x = 0
+y = 0
 center_point = []
 center_point.append([[x,y]])
 
@@ -97,16 +100,19 @@ def average_slope_intercept(frame, line_segments):
     distance_line.append(distance_lineMake(frame, center_point))
     return lane_lines, center_point, center_line, distance_line
 
+distance = 0
 def distance_lineMake(frame, center_point):
-	height, width, _ = frame.shape
-	circle1 = center_point[0]
-	circle2 = circle1[0]
-	y2 = circle2[1]
-	y1 = circle2[1]
-	x1 = circle2[0]
-	x2 = int(width*1/2)
-	print(x2 - x1)
-	return [[x1, y1, x2, y2]]
+    height, width, _ = frame.shape
+    circle1 = center_point[0]
+    circle2 = circle1[0]
+    y2 = circle2[1]
+    y1 = circle2[1]
+    x1 = circle2[0]
+    x2 = int(width*1/2)
+    global distance
+    distance = x2 - x1
+    #print(distance)
+    return [[x1, y1, x2, y2]]
 
 def center_lineMake(frame):
 	height, width, _ = frame.shape
@@ -156,37 +162,24 @@ def midpoints(lane_lines):
 	Cx = int((Lx + Rx)/2)
 	Cy = int((Ly + Ry)/2)
 	global filtered_x
-	filtered_x = exponential_filter(filtered_x, Cx, 0.8)
+	filtered_x = exponential_filter(filtered_x, Cx, 0.1)
 	Cx = int(filtered_x)
 	return [[Cx, Cy]]
 
-def midpointAverage(center_point, previous_point):
-	a = 0.8
-	prevpoint = previous_point[0]
-	prevpoint1 = prevpoint[0]
-	x0 = prevpoint1[0]
-	y0 = prevpoint1[1]
-	midpoint = center_point[0]
-	midpoint1 = midpoint[0]
-	xkx = midpoint1[0]
-	xky = midpoint1[1]
-	ykx = a*x0+(1-a)*xkx
-	yky = a*y0+(1-a)*xky
-	return [[ykx, yky]]
-
-filtered_x = 640
+filtered_x = 0
 
 def exponential_filter(filtered_x, x, alpha):
 	filtered_x = alpha*x + (1-alpha)*filtered_x
 	return filtered_x
 
 def detect_lane(frame):
-    edges = detect_edges(frame)
-    cropped_edges = region_of_interest(edges)
-    line_segments = detect_line_segments(cropped_edges)
-    lane_lines, center_point, center_line, distance_line = average_slope_intercept(frame, line_segments)
-    lane_lines_image = display_lines(frame, lane_lines, center_point, center_line, distance_line)
-    return lane_lines_image
+	global distance
+	edges = detect_edges(frame)
+	cropped_edges = region_of_interest(edges)
+	line_segments = detect_line_segments(cropped_edges)
+	lane_lines, center_point, center_line, distance_line = average_slope_intercept(frame, line_segments)
+	lane_lines_image = display_lines(frame, lane_lines, center_point, center_line, distance_line)
+	return lane_lines_image, distance
 
 def display_lines(frame, lines, points, center_line, distance_line, distance_color = (255, 0, 0), center_color = (0, 255, 0), line_color=(0, 255, 0), point_color = (0, 0, 255), line_width=2):
     line_image = np.zeros_like(frame)
@@ -220,12 +213,18 @@ def show_video():
     cap.release()
     cv2.destroyAllWindows()
 
+w=320
+h=180
 def gstreamer_pipeline(
-    capture_width=1280,
-    capture_height=720,
-    display_width=1280,
-    display_height=720,
-    framerate=60,
+    #capture_width=1280,
+    #capture_height=720,
+    #display_width=1280,
+    #display_height=720,
+    framerate=15,
+    capture_width=w,
+    capture_height=h,
+    display_width=w,
+    display_height=h,
     flip_method=0,
 ):
     return (
@@ -247,31 +246,46 @@ def gstreamer_pipeline(
         )
     )
 
+robot = Robot()
+def control_motor(distance):
+    threshold = 30
+    speed = 0.1
+    speedDif = speed*((2*abs(distance))/w)
+    print(distance)
+    if (distance < -threshold):  #turn right
+        robot.left_motor.value = speed+speedDif
+        robot.right_motor.value = speed
+    elif (distance > threshold): #turn Left
+        robot.right_motor.value = speed+speedDif
+        robot.left_motor.value = speed
+    else:
+        robot.set_motors(speed*1.5, speed*1.5)
 
 def show_camera():
-    # To flip the image, modify the flip_method parameter (0 and 2 are the most common)
-    print(gstreamer_pipeline(flip_method=0))
-    cap = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
-    if cap.isOpened():
-        window_handle = cv2.namedWindow("CSI Camera", cv2.WINDOW_AUTOSIZE)
-        # Window
-        while cv2.getWindowProperty("CSI Camera", 0) >= 0:
-            ret_val, img = cap.read()
-            
-            try:
-                img = detect_lane(img)
-            except:
-                print("Error")
-            cv2.imshow("CSI Camera", img)
-            # This also acts as
-            keyCode = cv2.waitKey(30) & 0xFF
-            # Stop the program on the ESC key
-            if keyCode == 27:
-                break
-        cap.release()
-        cv2.destroyAllWindows()
-    else:
-        print("Unable to open camera")
+	print(gstreamer_pipeline(flip_method=0))
+	cap = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
+	if cap.isOpened():
+		window_handle = cv2.namedWindow("CSI Camera", cv2.WINDOW_AUTOSIZE)
+		# Window
+		while cv2.getWindowProperty("CSI Camera", 0) >= 0:
+			ret_val, img = cap.read()
+
+			try:
+				img, distance = detect_lane(img)
+				control_motor(distance)
+			except:
+				print("Error")
+
+			cv2.imshow("CSI Camera", img)
+			# This also acts as
+			keyCode = cv2.waitKey(30) & 0xFF
+			# Stop the program on the ESC key
+			if keyCode == 27:
+				break
+		cap.release()
+		cv2.destroyAllWindows()
+	else:
+		print("Unable to open camera")
 
 
 if __name__ == "__main__":
